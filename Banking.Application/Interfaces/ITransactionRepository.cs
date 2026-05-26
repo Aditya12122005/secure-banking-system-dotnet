@@ -9,4 +9,6 @@ public interface ITransactionRepository
     Task<List<Transaction>> GetTransactionsByAccountIdAsync(Guid accountId);
 
     Task SaveChangesAsync();
+
+    Task<decimal> GetTodayTransferTotalAsync(Guid senderAccountId);
 }

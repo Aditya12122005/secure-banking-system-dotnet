@@ -45,4 +45,49 @@ public class AdminController : ControllerBase
 
         return Ok(logs);
     }
+
+    [HttpPut("freeze-account/{accountNumber}")]
+    public async Task<IActionResult> FreezeAccount(
+    string accountNumber)
+    {
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(a =>
+                a.AccountNumber == accountNumber);
+
+        if (account == null)
+        {
+            return NotFound("Account not found.");
+        }
+
+        account.IsFrozen = true;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            Message = "Account frozen successfully."
+        });
+    }
+    [HttpPut("unfreeze-account/{accountNumber}")]
+    public async Task<IActionResult> UnfreezeAccount(
+    string accountNumber)
+    {
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(a =>
+                a.AccountNumber == accountNumber);
+
+        if (account == null)
+        {
+            return NotFound("Account not found.");
+        }
+
+        account.IsFrozen = false;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            Message = "Account unfrozen successfully."
+        });
+    }
 }

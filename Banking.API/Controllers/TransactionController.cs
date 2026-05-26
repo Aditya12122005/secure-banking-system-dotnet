@@ -42,9 +42,34 @@ public class TransactionController : ControllerBase
             return BadRequest("Invalid account number.");
         }
 
+        if (sender.IsFrozen)
+        {
+            return BadRequest(
+                "Sender account is frozen.");
+        }
+
+        if (receiver.IsFrozen)
+        {
+            return BadRequest(
+                "Receiver account is frozen.");
+        }
+
         if (sender.Balance < request.Amount)
         {
             return BadRequest("Insufficient balance.");
+        }
+
+        // Daily Transaction Limit
+        var todayTransferTotal =
+            await _transactionRepository
+                .GetTodayTransferTotalAsync(sender.Id);
+
+        const decimal DAILY_LIMIT = 10000;
+
+        if ((todayTransferTotal + request.Amount) > DAILY_LIMIT)
+        {
+            return BadRequest(
+                $"Daily transfer limit exceeded. Maximum allowed is {DAILY_LIMIT}.");
         }
 
         sender.Balance -= request.Amount;

@@ -36,4 +36,15 @@ public class TransactionRepository : ITransactionRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<decimal> GetTodayTransferTotalAsync(Guid senderAccountId)
+    {
+        var today = DateTime.UtcNow.Date;
+
+        return await _context.Transactions
+            .Where(t =>
+                t.SenderAccountId == senderAccountId &&
+                t.TransactionDate.Date == today)
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+    }
 }

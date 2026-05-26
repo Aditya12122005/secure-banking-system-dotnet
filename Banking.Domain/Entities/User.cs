@@ -20,4 +20,6 @@ public class User
 
     // Navigation Property
     public ICollection<Account> Accounts { get; set; } = new List<Account>();
+
+    public string Role { get; set; } = "Customer";
 }

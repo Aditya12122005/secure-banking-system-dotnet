@@ -14,13 +14,18 @@ public class AuthController : ControllerBase
 
     private readonly IJwtService _jwtService;
 
+    private readonly IOtpService _otpService;
+
     public AuthController(
-        IUserRepository userRepository,
-        IJwtService jwtService)
+    IUserRepository userRepository,
+    IJwtService jwtService,
+    IOtpService otpService)
     {
         _userRepository = userRepository;
 
         _jwtService = jwtService;
+
+        _otpService = otpService;
     }
 
     [HttpPost("register")]
@@ -73,6 +78,35 @@ public class AuthController : ControllerBase
         if (!isPasswordValid)
         {
             return Unauthorized("Invalid email or password.");
+        }
+
+        var otp = _otpService.GenerateOtp(user.Email);
+
+        return Ok(new
+        {
+            Message = "OTP generated successfully.",
+
+            Otp = otp
+        });
+    }
+    [HttpPost("verify-otp")]
+    public async Task<IActionResult> VerifyOtp(
+    VerifyOtpRequestDto request)
+    {
+        var user = await _userRepository
+            .GetByEmailAsync(request.Email);
+
+        if (user == null)
+        {
+            return Unauthorized("User not found.");
+        }
+
+        var isOtpValid = _otpService
+            .VerifyOtp(request.Email, request.Otp);
+
+        if (!isOtpValid)
+        {
+            return Unauthorized("Invalid or expired OTP.");
         }
 
         var token = _jwtService.GenerateToken(user);

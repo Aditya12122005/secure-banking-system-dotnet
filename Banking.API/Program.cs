@@ -11,7 +11,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to container
+// Add Controllers
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -27,6 +27,12 @@ builder.Services.AddDbContext<BankingDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+builder.Services.AddSingleton<IOtpService, OtpService>();
+
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -47,8 +53,11 @@ builder.Services.AddAuthentication(options =>
         new TokenValidationParameters
         {
             ValidateIssuer = true,
+
             ValidateAudience = true,
+
             ValidateLifetime = true,
+
             ValidateIssuerSigningKey = true,
 
             ValidIssuer = jwtSettings["Issuer"],

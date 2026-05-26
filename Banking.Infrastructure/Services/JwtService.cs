@@ -31,13 +31,15 @@ public class JwtService : IJwtService
             SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+{
+    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
 
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+    new Claim(JwtRegisteredClaimNames.Email, user.Email),
 
-            new Claim("FullName", user.FullName)
-        };
+    new Claim(ClaimTypes.Role, user.Role),
+
+    new Claim("FullName", user.FullName)
+};
 
         var token = new JwtSecurityToken(
             issuer: _configuration["JwtSettings:Issuer"],

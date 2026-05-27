@@ -16,16 +16,21 @@ public class AuthController : ControllerBase
 
     private readonly IOtpService _otpService;
 
+    private readonly IRefreshTokenService _refreshTokenService;
+
     public AuthController(
-    IUserRepository userRepository,
-    IJwtService jwtService,
-    IOtpService otpService)
+        IUserRepository userRepository,
+        IJwtService jwtService,
+        IOtpService otpService,
+        IRefreshTokenService refreshTokenService)
     {
         _userRepository = userRepository;
 
         _jwtService = jwtService;
 
         _otpService = otpService;
+
+        _refreshTokenService = refreshTokenService;
     }
 
     [HttpPost("register")]
@@ -89,9 +94,10 @@ public class AuthController : ControllerBase
             Otp = otp
         });
     }
+
     [HttpPost("verify-otp")]
     public async Task<IActionResult> VerifyOtp(
-    VerifyOtpRequestDto request)
+        VerifyOtpRequestDto request)
     {
         var user = await _userRepository
             .GetByEmailAsync(request.Email);
@@ -111,9 +117,19 @@ public class AuthController : ControllerBase
 
         var token = _jwtService.GenerateToken(user);
 
+        var refreshToken =
+            _refreshTokenService.GenerateRefreshToken();
+
+        await _refreshTokenService
+            .SaveRefreshTokenAsync(
+                user,
+                refreshToken);
+
         var response = new AuthResponseDto
         {
             Token = token,
+
+            RefreshToken = refreshToken,
 
             Email = user.Email,
 
@@ -121,5 +137,37 @@ public class AuthController : ControllerBase
         };
 
         return Ok(response);
+    }
+
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken(
+        RefreshTokenRequestDto request)
+    {
+        var storedToken =
+            await _refreshTokenService
+                .GetRefreshTokenAsync(
+                    request.RefreshToken);
+
+        if (storedToken == null)
+        {
+            return Unauthorized(
+                "Invalid refresh token.");
+        }
+
+        if (storedToken.ExpiryDate < DateTime.UtcNow)
+        {
+            return Unauthorized(
+                "Refresh token expired.");
+        }
+
+        var user = storedToken.User;
+
+        var newAccessToken =
+            _jwtService.GenerateToken(user);
+
+        return Ok(new
+        {
+            Token = newAccessToken
+        });
     }
 }

@@ -28,11 +28,15 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
 builder.Services.AddSingleton<IOtpService, OtpService>();
 
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+
+
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");

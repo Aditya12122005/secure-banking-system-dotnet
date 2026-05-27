@@ -16,18 +16,25 @@ public class AccountController : ControllerBase
 {
     private readonly IAccountRepository _accountRepository;
 
-    public AccountController(IAccountRepository accountRepository)
+    private readonly ICacheService _cacheService;
+
+    public AccountController(
+        IAccountRepository accountRepository,
+        ICacheService cacheService)
     {
         _accountRepository = accountRepository;
+
+        _cacheService = cacheService;
     }
 
     [HttpPost("create")]
     public async Task<IActionResult> CreateAccount(
         CreateAccountRequestDto request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
 
-        if (userId == null)
+        if (string.IsNullOrEmpty(userId))
         {
             return Unauthorized();
         }
@@ -36,57 +43,83 @@ public class AccountController : ControllerBase
         {
             Id = Guid.NewGuid(),
 
-            UserId = Guid.Parse(userId),
-
             AccountNumber = GenerateAccountNumber(),
+
+            Balance = 0,
 
             AccountType = request.AccountType,
 
-            Balance = 0
+            IsActive = true,
+
+            IsFrozen = false,
+
+            CreatedAt = DateTime.UtcNow,
+
+            UserId = Guid.Parse(userId)
         };
 
-        await _accountRepository.AddAccountAsync(account);
+        await _accountRepository
+            .AddAccountAsync(account);
 
-        await _accountRepository.SaveChangesAsync();
+        await _accountRepository
+            .SaveChangesAsync();
+
+        // Remove Old Cache
+        await _cacheService.RemoveAsync("accounts");
 
         return Ok(new
         {
             Message = "Account created successfully.",
+
             AccountNumber = account.AccountNumber
         });
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetMyAccounts()
+    public async Task<IActionResult> GetAccounts()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var cacheKey = "accounts";
 
-        if (userId == null)
+        // Check Redis Cache
+        var cachedAccounts =
+            await _cacheService
+                .GetAsync<List<Account>>(cacheKey);
+
+        if (cachedAccounts != null)
         {
-            return Unauthorized();
+            return Ok(new
+            {
+                Source = "Redis Cache",
+
+                Data = cachedAccounts
+            });
         }
 
-        var accounts = await _accountRepository
-            .GetAccountsByUserIdAsync(Guid.Parse(userId));
+        // Fetch From Database
+        var accounts =
+            await _accountRepository
+                .GetAllAccountsAsync();
 
-        var response = accounts.Select(a => new AccountResponseDto
+        // Store In Redis
+        await _cacheService.SetAsync(
+            cacheKey,
+            accounts,
+            TimeSpan.FromMinutes(5));
+
+        return Ok(new
         {
-            Id = a.Id,
+            Source = "PostgreSQL Database",
 
-            AccountNumber = a.AccountNumber,
-
-            Balance = a.Balance,
-
-            AccountType = a.AccountType
+            Data = accounts
         });
-
-        return Ok(response);
     }
 
-    private string GenerateAccountNumber()
+    private static string GenerateAccountNumber()
     {
         var random = new Random();
 
-        return random.Next(100000000, 999999999).ToString();
+        return random.Next(
+            100000000,
+            999999999).ToString();
     }
 }

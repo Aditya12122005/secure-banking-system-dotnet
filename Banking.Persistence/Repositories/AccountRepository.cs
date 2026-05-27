@@ -45,4 +45,10 @@ public class AccountRepository : IAccountRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<Account>> GetAllAccountsAsync()
+    {
+        return await _context.Accounts
+            .ToListAsync();
+    }
 }

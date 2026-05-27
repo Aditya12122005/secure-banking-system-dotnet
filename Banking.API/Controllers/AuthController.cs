@@ -18,11 +18,14 @@ public class AuthController : ControllerBase
 
     private readonly IRefreshTokenService _refreshTokenService;
 
+    private readonly IEmailService _emailService;
+
     public AuthController(
-        IUserRepository userRepository,
-        IJwtService jwtService,
-        IOtpService otpService,
-        IRefreshTokenService refreshTokenService)
+    IUserRepository userRepository,
+    IJwtService jwtService,
+    IOtpService otpService,
+    IRefreshTokenService refreshTokenService,
+    IEmailService emailService)
     {
         _userRepository = userRepository;
 
@@ -31,6 +34,8 @@ public class AuthController : ControllerBase
         _otpService = otpService;
 
         _refreshTokenService = refreshTokenService;
+
+        _emailService = emailService;
     }
 
     [HttpPost("register")]
@@ -87,11 +92,16 @@ public class AuthController : ControllerBase
 
         var otp = _otpService.GenerateOtp(user.Email);
 
+        await _emailService.SendEmailAsync(
+    user.Email,
+    "Secure Banking OTP",
+    $"Your OTP is: {otp}");
+
         return Ok(new
         {
-            Message = "OTP generated successfully.",
+            
 
-            Otp = otp
+            Message = "OTP sent successfully to email."
         });
     }
 

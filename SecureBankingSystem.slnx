@@ -1,6 +1,11 @@
 <Solution>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/workflows/">
+    <File Path="ci-cd.yml" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
+    <File Path="docker-compose.yml" />
   </Folder>
   <Project Path="Banking.API/Banking.API.csproj" />
   <Project Path="Banking.Application/Banking.Application.csproj" />

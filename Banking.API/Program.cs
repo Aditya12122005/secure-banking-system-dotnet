@@ -46,6 +46,8 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 
 
 // JWT Authentication

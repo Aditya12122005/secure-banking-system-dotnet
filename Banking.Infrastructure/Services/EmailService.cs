@@ -24,12 +24,30 @@ public class EmailService : IEmailService
         string subject,
         string body)
     {
+        var senderName =
+            _configuration["EmailSettings:SenderName"]!;
+
+        var senderEmail =
+            _configuration["EmailSettings:SenderEmail"]!;
+
+        var smtpServer =
+            _configuration["EmailSettings:SmtpServer"]!;
+
+        var username =
+            _configuration["EmailSettings:Username"]!;
+
+        var password =
+            _configuration["EmailSettings:Password"]!;
+
+        var port = Convert.ToInt32(
+            _configuration["EmailSettings:Port"]);
+
         var email = new MimeMessage();
 
         email.From.Add(
             new MailboxAddress(
-                _configuration["EmailSettings:SenderName"],
-                _configuration["EmailSettings:SenderEmail"]));
+                senderName,
+                senderEmail));
 
         email.To.Add(
             MailboxAddress.Parse(toEmail));
@@ -43,15 +61,18 @@ public class EmailService : IEmailService
 
         using var smtp = new SmtpClient();
 
+        // ONLY for Development/Docker Testing
+        smtp.ServerCertificateValidationCallback =
+            (s, c, h, e) => true;
+
         await smtp.ConnectAsync(
-            _configuration["EmailSettings:SmtpServer"],
-            Convert.ToInt32(
-                _configuration["EmailSettings:Port"]),
+            smtpServer,
+            port,
             SecureSocketOptions.StartTls);
 
         await smtp.AuthenticateAsync(
-            _configuration["EmailSettings:Username"],
-            _configuration["EmailSettings:Password"]);
+            username,
+            password);
 
         await smtp.SendAsync(email);
 

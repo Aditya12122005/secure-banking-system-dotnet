@@ -1,3 +1,4 @@
+using Microsoft.OpenApi.Models;
 using Banking.Application.Interfaces;
 using Banking.Infrastructure.Services;
 using Banking.Persistence.Context;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using AspNetCoreRateLimit;
 using Serilog;
+
 
 using System.Text;
 
@@ -26,7 +28,39 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new()
+    {
+        Title = "Banking.API",
+        Version = "v1"
+    });
+
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter JWT Token"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // PostgreSQL Connection
 builder.Services.AddDbContext<BankingDbContext>(options =>
@@ -105,6 +139,46 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+
+    var logger = services
+        .GetRequiredService<ILogger<Program>>();
+
+    var dbContext = services
+        .GetRequiredService<BankingDbContext>();
+
+    var retries = 10;
+
+    while (retries > 0)
+    {
+        try
+        {
+            logger.LogInformation(
+                "Attempting database migration...");
+
+            dbContext.Database.Migrate();
+
+            logger.LogInformation(
+                "Database migration successful.");
+
+            break;
+        }
+        catch (Exception ex)
+        {
+            retries--;
+
+            logger.LogError(
+                ex,
+                "Database migration failed. Retries left: {Retries}",
+                retries);
+
+            Thread.Sleep(5000);
+        }
+    }
+}
+
 // Middleware
 if (app.Environment.IsDevelopment())
 {
@@ -115,7 +189,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseSerilogRequestLogging();
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseIpRateLimiting();
 

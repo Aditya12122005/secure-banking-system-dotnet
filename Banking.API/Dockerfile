@@ -1,25 +1,33 @@
-# Base Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-WORKDIR /app
-EXPOSE 8080
+
+
+
+
+
+
+
+
+
 
 # Build Stage
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+
 WORKDIR /src
 
 COPY . .
 
-WORKDIR "/src/Banking.API"
+RUN dotnet restore "Banking.API/Banking.API.csproj"
 
-RUN dotnet restore
+RUN dotnet publish "Banking.API/Banking.API.csproj" \
+    -c Release \
+    -o /app/publish
 
-RUN dotnet publish -c Release -o /app/publish
-
-# Final Stage
-FROM base AS final
+# Runtime Stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview
 
 WORKDIR /app
 
 COPY --from=build /app/publish .
+
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Banking.API.dll"]
